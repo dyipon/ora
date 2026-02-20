@@ -87,7 +87,36 @@
   </div>
 
   <script>
-    // JS will be added in subsequent tasks
+    // --- Clock & Date ---
+    const DAYS = ['vasárnap', 'hétfő', 'kedd', 'szerda', 'csütörtök', 'péntek', 'szombat'];
+    const MONTHS = [
+      'január', 'február', 'március', 'április', 'május', 'június',
+      'július', 'augusztus', 'szeptember', 'október', 'november', 'december'
+    ];
+
+    const hoursEl = document.getElementById('hours');
+    const minutesEl = document.getElementById('minutes');
+    const colonEl = document.querySelector('.colon');
+    const dateEl = document.getElementById('date');
+
+    function updateClock() {
+      const now = new Date();
+      hoursEl.textContent = String(now.getHours()).padStart(2, '0');
+      minutesEl.textContent = String(now.getMinutes()).padStart(2, '0');
+      colonEl.classList.toggle('off');
+    }
+
+    function updateDate() {
+      const now = new Date();
+      const day = DAYS[now.getDay()];
+      const month = MONTHS[now.getMonth()];
+      dateEl.textContent = `${now.getFullYear()}. ${month} ${now.getDate()}., ${day}`;
+    }
+
+    updateClock();
+    updateDate();
+    setInterval(updateClock, 1000);
+    setInterval(updateDate, 60000);
   </script>
 </body>
 </html>
