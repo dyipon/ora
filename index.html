@@ -37,7 +37,7 @@
     }
 
     #time {
-      font-size: 25vw;
+      font-size: 32vw;
       font-weight: bold;
       line-height: 1;
       letter-spacing: 0.02em;
@@ -53,26 +53,29 @@
     }
 
     #date {
-      font-size: 4vw;
+      font-size: 6vw;
+      font-weight: bold;
       margin-top: 2vh;
       opacity: 0.7;
     }
 
     #weather {
-      font-size: 3.5vw;
-      margin-top: 4vh;
-      opacity: 0.6;
+      position: fixed;
+      bottom: 3vh;
+      left: 3vw;
+      font-size: 4vw;
+      opacity: 0.5;
     }
 
     @media (orientation: portrait) {
       #time {
-        font-size: 18vw;
+        font-size: 22vw;
       }
       #date {
-        font-size: 5vw;
+        font-size: 7vw;
       }
       #weather {
-        font-size: 4.5vw;
+        font-size: 5vw;
       }
     }
   </style>
@@ -83,8 +86,8 @@
       <span id="hours">00</span><span class="colon">:</span><span id="minutes">00</span>
     </div>
     <div id="date"></div>
-    <div id="weather"></div>
   </div>
+  <div id="weather"></div>
 
   <script>
     // --- Clock & Date ---
@@ -110,7 +113,7 @@
       const now = new Date();
       const day = DAYS[now.getDay()];
       const month = MONTHS[now.getMonth()];
-      dateEl.textContent = `${now.getFullYear()}. ${month} ${now.getDate()}., ${day}`;
+      dateEl.textContent = `${month} ${now.getDate()}., ${day}`;
     }
 
     updateClock();
@@ -127,7 +130,7 @@
         const res = await fetch(WEATHER_URL);
         const data = await res.json();
         const temp = Math.round(data.current.temperature_2m);
-        weatherEl.textContent = `Eger: ${temp}°C`;
+        weatherEl.textContent = `${temp}°C`;
       } catch (e) {
         // Keep last displayed value on error
       }
