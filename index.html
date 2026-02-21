@@ -179,9 +179,16 @@
       }
     });
 
+    // --- Fullscreen on click/tap ---
+    document.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    });
+
     // --- Service Worker ---
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('sw.js');
     }
   </script>
 </body>
