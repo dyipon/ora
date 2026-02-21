@@ -9,7 +9,7 @@
   <title>Óra</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
   <style>
     * {
@@ -24,7 +24,7 @@
       overflow: hidden;
       background: #000;
       color: #fff;
-      font-family: 'Inter', sans-serif;
+      font-family: 'Quicksand', sans-serif;
       font-variant-numeric: tabular-nums;
       user-select: none;
       -webkit-user-select: none;
@@ -48,7 +48,14 @@
     }
 
     #time .colon {
-      opacity: 0.5;
+      opacity: 1;
+    }
+
+    #date-top {
+      font-size: 6vw;
+      font-weight: bold;
+      margin-bottom: 2vh;
+      opacity: 0.7;
     }
 
     #date {
@@ -62,31 +69,47 @@
       position: fixed;
       bottom: 3vh;
       left: 3vw;
-      font-size: 4vw;
-      opacity: 0.5;
+      font-size: 6vw;
+      opacity: 0.7;
+    }
+
+    #forecast {
+      position: fixed;
+      bottom: 3vh;
+      right: 3vw;
+      font-size: 6vw;
+      opacity: 0.7;
     }
 
     @media (orientation: portrait) {
       #time {
         font-size: 22vw;
       }
+      #date-top {
+        font-size: 7vw;
+      }
       #date {
         font-size: 7vw;
       }
       #weather {
-        font-size: 5vw;
+        font-size: 7.2vw;
+      }
+      #forecast {
+        font-size: 7.2vw;
       }
     }
   </style>
 </head>
 <body>
   <div id="container">
+    <div id="date-top"></div>
     <div id="time">
       <span id="hours">00</span><span class="colon">:</span><span id="minutes">00</span>
     </div>
     <div id="date"></div>
   </div>
   <div id="weather"></div>
+  <div id="forecast"></div>
 
   <script>
     // --- Clock & Date ---
@@ -99,6 +122,7 @@
     const hoursEl = document.getElementById('hours');
     const minutesEl = document.getElementById('minutes');
     const colonEl = document.querySelector('.colon');
+    const dateTopEl = document.getElementById('date-top');
     const dateEl = document.getElementById('date');
 
     function updateClock() {
@@ -112,7 +136,8 @@
       const now = new Date();
       const day = DAYS[now.getDay()];
       const month = MONTHS[now.getMonth()];
-      dateEl.textContent = `${month} ${now.getDate()}., ${day}`;
+      dateTopEl.textContent = `${month} ${now.getDate()}`;
+      dateEl.textContent = day;
     }
 
     updateClock();
@@ -122,7 +147,19 @@
 
     // --- Weather ---
     const weatherEl = document.getElementById('weather');
-    const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=47.9025&longitude=20.3772&current=temperature_2m';
+    const forecastEl = document.getElementById('forecast');
+    const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=47.9025&longitude=20.3772&current=temperature_2m&daily=temperature_2m_max,weather_code&timezone=auto&forecast_days=1';
+
+    function weatherIcon(code) {
+      if (code <= 1) return '☀️';
+      if (code <= 3) return '☁️';
+      if (code <= 48) return '🌫️';
+      if (code <= 67) return '🌧️';
+      if (code <= 77) return '❄️';
+      if (code <= 82) return '🌧️';
+      if (code <= 86) return '❄️';
+      return '⛈️';
+    }
 
     async function updateWeather() {
       try {
@@ -130,6 +167,9 @@
         const data = await res.json();
         const temp = Math.round(data.current.temperature_2m);
         weatherEl.textContent = `${temp}°C`;
+        const maxTemp = Math.round(data.daily.temperature_2m_max[0]);
+        const icon = weatherIcon(data.daily.weather_code[0]);
+        forecastEl.textContent = `${icon} ${maxTemp}°C`;
       } catch (e) {
         // Keep last displayed value on error
       }
