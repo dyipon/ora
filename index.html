@@ -149,7 +149,7 @@
     // --- Weather ---
     const weatherEl = document.getElementById('weather');
     const forecastEl = document.getElementById('forecast');
-    const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=47.9025&longitude=20.3772&current=temperature_2m&daily=temperature_2m_max,weather_code&timezone=auto&forecast_days=1';
+    const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=47.9025&longitude=20.3772&current=temperature_2m&daily=temperature_2m_max,weather_code,wind_speed_10m_max&timezone=auto&forecast_days=2';
 
     function weatherIcon(code) {
       if (code <= 1) return '☀️';
@@ -168,9 +168,13 @@
         const data = await res.json();
         const temp = Math.round(data.current.temperature_2m);
         weatherEl.textContent = `${temp}°C`;
-        const maxTemp = Math.round(data.daily.temperature_2m_max[0]);
-        const icon = weatherIcon(data.daily.weather_code[0]);
-        forecastEl.textContent = `${icon} ${maxTemp}°C`;
+        const hour = new Date().getHours();
+        const idx = hour >= 16 ? 1 : 0;
+        const maxTemp = Math.round(data.daily.temperature_2m_max[idx]);
+        const icon = weatherIcon(data.daily.weather_code[idx]);
+        const wind = Math.round(data.daily.wind_speed_10m_max[idx]);
+        const windStr = wind >= 25 ? ` 💨${wind}` : '';
+        forecastEl.textContent = `${icon} ${maxTemp}°C${windStr}`;
       } catch (e) {
         // Keep last displayed value on error
       }
