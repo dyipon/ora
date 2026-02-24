@@ -32,7 +32,7 @@
 
     #container {
       position: absolute;
-      top: 50%;
+      top: 42%;
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
@@ -125,7 +125,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 2;
+      z-index: 0;
       pointer-events: none;
     }
   </style>
@@ -286,25 +286,24 @@
       navigator.serviceWorker.register('sw.js');
     }
 
-    // --- Nokia Snake Animation ---
+    // --- Snake Animation ---
     (function() {
-      const CELL = 10;
-      const SNAKE_COLOR = '#555';
-      const SNAKE_HEAD_COLOR = '#888';
+      const CELL = 7;
+      const SNAKE_COLOR = 'rgba(255,255,255,0.6)';
+      const SNAKE_HEAD_COLOR = 'rgba(255,255,255,0.8)';
       const TICK_MS = 350;
       const MAX_LENGTH = 15;
-      const RESPAWN_MS = 10000;
+      const PAD = 2; // extra cells padding around text rects
 
       const canvas = document.getElementById('snake-canvas');
       const ctx = canvas.getContext('2d');
       let cols, rows;
       let snake = [];
       let direction = { x: 1, y: 0 };
-      let eaten = []; // { x, y, time } — black squares covering text
       let lastTick = 0;
 
-      // Text elements the snake targets
-      const targets = [
+      // Text elements the snake must avoid
+      const obstacles = [
         document.getElementById('container'),
         document.getElementById('weather'),
         document.getElementById('forecast-area')
@@ -317,19 +316,30 @@
         rows = Math.floor(canvas.height / CELL);
       }
 
+      // Check if a grid cell overlaps any text element (with padding)
+      function isTextCell(cx, cy) {
+        var px = cx * CELL;
+        var py = cy * CELL;
+        for (var i = 0; i < obstacles.length; i++) {
+          var r = obstacles[i].getBoundingClientRect();
+          if (r.width === 0) continue;
+          var pad = PAD * CELL;
+          if (px + CELL > r.left - pad && px < r.right + pad &&
+              py + CELL > r.top - pad && py < r.bottom + pad) {
+            return true;
+          }
+        }
+        return false;
+      }
+
       function initSnake() {
         snake = [];
-        // Start at top-left area, away from text
-        const cx = Math.floor(cols * 0.1);
-        const cy = Math.floor(rows * 0.1);
-        for (let i = 4; i >= 0; i--) {
+        // Start at top-left corner
+        var cx = 2, cy = 2;
+        for (var i = 4; i >= 0; i--) {
           snake.push({ x: cx - i, y: cy });
         }
         direction = { x: 1, y: 0 };
-      }
-
-      function clamp(pos) {
-        return { x: Math.max(0, Math.min(cols - 1, pos.x)), y: Math.max(0, Math.min(rows - 1, pos.y)) };
       }
 
       function isAtEdge(head, dir) {
@@ -338,58 +348,49 @@
         return nx < 0 || nx >= cols || ny < 0 || ny >= rows;
       }
 
-      // Get a random target point inside one of the text elements
-      function getTextTarget() {
-        const el = targets[Math.floor(Math.random() * targets.length)];
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return null;
-        const px = rect.left + Math.random() * rect.width;
-        const py = rect.top + Math.random() * rect.height;
-        return { x: Math.floor(px / CELL), y: Math.floor(py / CELL) };
-      }
-
-      let currentTarget = null;
-
-      function move() {
-        const head = snake[snake.length - 1];
-        const newHead = clamp({ x: head.x + direction.x, y: head.y + direction.y });
-        snake.push(newHead);
-
-        // Record eaten pixel (black mask) at new head position
-        eaten.push({ x: newHead.x, y: newHead.y, time: Date.now() });
-
-        // Trim snake to max length
-        while (snake.length > MAX_LENGTH) {
-          snake.shift();
-        }
-      }
-
       function wouldCollide(dir) {
-        const head = snake[snake.length - 1];
-        // Wall = collision
+        var head = snake[snake.length - 1];
         if (isAtEdge(head, dir)) return true;
-        const next = { x: head.x + dir.x, y: head.y + dir.y };
-        for (let i = 1; i < snake.length; i++) {
-          if (snake[i].x === next.x && snake[i].y === next.y) return true;
+        var nx = head.x + dir.x;
+        var ny = head.y + dir.y;
+        // Text obstacle
+        if (isTextCell(nx, ny)) return true;
+        // Self
+        for (var i = 1; i < snake.length; i++) {
+          if (snake[i].x === nx && snake[i].y === ny) return true;
         }
         return false;
       }
 
-      function steer() {
-        const head = snake[snake.length - 1];
+      // Pick a random empty point on screen (not on text)
+      let currentTarget = null;
+      function pickTarget() {
+        for (var a = 0; a < 50; a++) {
+          var tx = Math.floor(Math.random() * cols);
+          var ty = Math.floor(Math.random() * rows);
+          if (!isTextCell(tx, ty)) return { x: tx, y: ty };
+        }
+        return { x: Math.floor(cols / 2), y: 0 };
+      }
 
-        // Pick a new target if we don't have one or reached it
+      function move() {
+        var head = snake[snake.length - 1];
+        var newHead = { x: head.x + direction.x, y: head.y + direction.y };
+        snake.push(newHead);
+        while (snake.length > MAX_LENGTH) snake.shift();
+      }
+
+      function steer() {
+        var head = snake[snake.length - 1];
+
         if (!currentTarget || (head.x === currentTarget.x && head.y === currentTarget.y)) {
-          currentTarget = getTextTarget();
+          currentTarget = pickTarget();
         }
 
-        // 10% random turn for organic feel
-        if (Math.random() < 0.10) {
-          const dirs = [
-            { x: 0, y: -1 }, { x: 0, y: 1 },
-            { x: -1, y: 0 }, { x: 1, y: 0 }
-          ];
-          const valid = dirs.filter(function(d) {
+        // 15% random turn
+        if (Math.random() < 0.15) {
+          var dirs = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
+          var valid = dirs.filter(function(d) {
             if (d.x === -direction.x && d.y === -direction.y) return false;
             return !wouldCollide(d);
           });
@@ -400,40 +401,28 @@
         }
 
         if (currentTarget) {
-          var candidates = [];
           var dx = currentTarget.x - head.x;
           var dy = currentTarget.y - head.y;
-
           var prefX = dx !== 0 ? Math.sign(dx) : 0;
           var prefY = dy !== 0 ? Math.sign(dy) : 0;
-
-          var hDist = Math.abs(dx);
-          var vDist = Math.abs(dy);
-
-          if (hDist >= vDist) {
+          var candidates = [];
+          if (Math.abs(dx) >= Math.abs(dy)) {
             if (prefX !== 0) candidates.push({ x: prefX, y: 0 });
             if (prefY !== 0) candidates.push({ x: 0, y: prefY });
           } else {
             if (prefY !== 0) candidates.push({ x: 0, y: prefY });
             if (prefX !== 0) candidates.push({ x: prefX, y: 0 });
           }
-
           for (var i = 0; i < candidates.length; i++) {
             var c = candidates[i];
             if (c.x === -direction.x && c.y === -direction.y) continue;
-            if (!wouldCollide(c)) {
-              direction = c;
-              return;
-            }
+            if (!wouldCollide(c)) { direction = c; return; }
           }
         }
 
-        // Fallback: avoid collision
+        // Fallback
         if (wouldCollide(direction)) {
-          var dirs = [
-            { x: 0, y: -1 }, { x: 0, y: 1 },
-            { x: -1, y: 0 }, { x: 1, y: 0 }
-          ];
+          var dirs = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
           var valid = dirs.filter(function(d) {
             if (d.x === -direction.x && d.y === -direction.y) return false;
             return !wouldCollide(d);
@@ -446,26 +435,12 @@
 
       function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        var now = Date.now();
-
-        // Remove expired eaten pixels, draw active ones as black squares
-        var alive = [];
-        ctx.fillStyle = '#000';
-        for (var i = 0; i < eaten.length; i++) {
-          if (now - eaten[i].time < RESPAWN_MS) {
-            alive.push(eaten[i]);
-            ctx.fillRect(eaten[i].x * CELL, eaten[i].y * CELL, CELL, CELL);
-          }
-        }
-        eaten = alive;
-
-        // Draw snake body
+        // Snake body
         ctx.fillStyle = SNAKE_COLOR;
         for (var i = 0; i < snake.length - 1; i++) {
           ctx.fillRect(snake[i].x * CELL, snake[i].y * CELL, CELL - 1, CELL - 1);
         }
-
-        // Draw snake head (brighter)
+        // Snake head
         if (snake.length > 0) {
           ctx.fillStyle = SNAKE_HEAD_COLOR;
           var head = snake[snake.length - 1];
