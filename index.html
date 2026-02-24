@@ -75,14 +75,28 @@
       z-index: 1;
     }
 
-    #forecast {
+    #forecast-area {
       position: fixed;
       bottom: 3vh;
       right: 3vw;
+      display: flex;
+      align-items: baseline;
+      gap: 3vw;
+      z-index: 1;
+    }
+
+    #hourly {
+      font-size: 3.5vw;
+      font-weight: bold;
+      opacity: 0.55;
+      display: flex;
+      gap: 1.5vw;
+    }
+
+    #forecast {
       font-size: 8vw;
       font-weight: bold;
       opacity: 0.85;
-      z-index: 1;
     }
 
     @media (orientation: portrait) {
@@ -100,6 +114,9 @@
       }
       #forecast {
         font-size: 9vw;
+      }
+      #hourly {
+        font-size: 4.5vw;
       }
     }
     #snake-canvas {
@@ -123,7 +140,10 @@
     <div id="date"></div>
   </div>
   <div id="weather"></div>
-  <div id="forecast"></div>
+  <div id="forecast-area">
+    <div id="hourly"></div>
+    <div id="forecast"></div>
+  </div>
 
   <script>
     // --- Clock & Date ---
@@ -162,7 +182,8 @@
     // --- Weather ---
     const weatherEl = document.getElementById('weather');
     const forecastEl = document.getElementById('forecast');
-    const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=47.9025&longitude=20.3772&current=temperature_2m&daily=temperature_2m_max,weather_code,wind_speed_10m_max&timezone=auto&forecast_days=2';
+    const hourlyEl = document.getElementById('hourly');
+    const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=47.9025&longitude=20.3772&current=temperature_2m&daily=temperature_2m_max,weather_code,wind_speed_10m_max&hourly=temperature_2m,weather_code&timezone=auto&forecast_days=2';
 
     function weatherIcon(code) {
       if (code <= 1) return '☀️';
@@ -188,6 +209,22 @@
         const wind = Math.round(data.daily.wind_speed_10m_max[idx]);
         const windStr = wind >= 25 ? ` 💨${wind}` : '';
         forecastEl.textContent = `${icon} ${maxTemp}°C${windStr}`;
+
+        // Hourly forecast: next 4 hours
+        const nowISO = data.current.time || new Date().toISOString();
+        const currentHourStr = nowISO.slice(0, 13); // "YYYY-MM-DDTHH"
+        let startIdx = data.hourly.time.findIndex(t => t.startsWith(currentHourStr));
+        if (startIdx === -1) startIdx = hour; // fallback
+        const parts = [];
+        for (let i = 1; i <= 4; i++) {
+          const hi = startIdx + i;
+          if (hi < data.hourly.time.length) {
+            const hIcon = weatherIcon(data.hourly.weather_code[hi]);
+            const hTemp = Math.round(data.hourly.temperature_2m[hi]);
+            parts.push(`${hIcon}${hTemp}°`);
+          }
+        }
+        hourlyEl.textContent = parts.join('  ');
       } catch (e) {
         // Keep last displayed value on error
       }
@@ -270,7 +307,7 @@
       const targets = [
         document.getElementById('container'),
         document.getElementById('weather'),
-        document.getElementById('forecast')
+        document.getElementById('forecast-area')
       ];
 
       function resize() {
