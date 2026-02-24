@@ -38,6 +38,7 @@
       text-align: center;
       white-space: nowrap;
       will-change: transform;
+      z-index: 1;
     }
 
     #time {
@@ -71,6 +72,7 @@
       font-size: 8vw;
       font-weight: bold;
       opacity: 0.85;
+      z-index: 1;
     }
 
     #forecast {
@@ -80,6 +82,7 @@
       font-size: 8vw;
       font-weight: bold;
       opacity: 0.85;
+      z-index: 1;
     }
 
     @media (orientation: portrait) {
@@ -99,9 +102,19 @@
         font-size: 9vw;
       }
     }
+    #snake-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
+  <canvas id="snake-canvas"></canvas>
   <div id="container">
     <div id="time">
       <span id="hours">00</span><span class="colon">:</span><span id="minutes">00</span>
@@ -235,6 +248,259 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
+
+    // --- Nokia Snake Animation ---
+    (function() {
+      const CELL = 10;
+      const SNAKE_COLOR = '#33ff33';
+      const SNAKE_HEAD_COLOR = '#66ff66';
+      const FOOD_COLOR = 'rgba(51, 255, 51, 0.5)';
+      const TICK_MS = 350;
+      const MAX_LENGTH = 20;
+      const FOOD_COUNT = 10;
+      const RESPAWN_MS = 30000;
+
+      const canvas = document.getElementById('snake-canvas');
+      const ctx = canvas.getContext('2d');
+      let cols, rows;
+      let snake = [];
+      let direction = { x: 1, y: 0 };
+      let foods = [];
+      let lastTick = 0;
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        cols = Math.floor(canvas.width / CELL);
+        rows = Math.floor(canvas.height / CELL);
+      }
+
+      function initSnake() {
+        snake = [];
+        const cx = Math.floor(cols / 2);
+        const cy = Math.floor(rows / 2);
+        for (let i = 4; i >= 0; i--) {
+          snake.push({ x: cx - i, y: cy });
+        }
+        direction = { x: 1, y: 0 };
+      }
+
+      function spawnFood() {
+        const occupied = new Set();
+        for (const s of snake) occupied.add(s.x + ',' + s.y);
+        for (const f of foods) occupied.add(f.x + ',' + f.y);
+        let attempts = 0;
+        while (attempts < 200) {
+          const x = Math.floor(Math.random() * cols);
+          const y = Math.floor(Math.random() * rows);
+          if (!occupied.has(x + ',' + y)) {
+            foods.push({ x: x, y: y });
+            return;
+          }
+          attempts++;
+        }
+      }
+
+      function initFoods() {
+        foods = [];
+        for (let i = 0; i < FOOD_COUNT; i++) {
+          spawnFood();
+        }
+      }
+
+      function wrap(pos) {
+        return { x: ((pos.x % cols) + cols) % cols, y: ((pos.y % rows) + rows) % rows };
+      }
+
+      function move() {
+        const head = snake[snake.length - 1];
+        const newHead = wrap({ x: head.x + direction.x, y: head.y + direction.y });
+
+        // Check if we eat food
+        let ateFood = false;
+        for (let i = 0; i < foods.length; i++) {
+          if (foods[i].x === newHead.x && foods[i].y === newHead.y) {
+            foods.splice(i, 1);
+            ateFood = true;
+            // Respawn food after delay
+            setTimeout(function() { spawnFood(); }, RESPAWN_MS);
+            // Immediately spawn if too few foods
+            if (foods.length < 3) {
+              spawnFood();
+            }
+            break;
+          }
+        }
+
+        snake.push(newHead);
+
+        // If we didn't eat, or we're at max length, trim
+        if (!ateFood || snake.length > MAX_LENGTH) {
+          if (snake.length > MAX_LENGTH) {
+            snake.splice(0, snake.length - MAX_LENGTH);
+          } else {
+            snake.shift();
+          }
+        }
+      }
+
+      function wouldCollide(dir) {
+        const head = snake[snake.length - 1];
+        const next = wrap({ x: head.x + dir.x, y: head.y + dir.y });
+        // Check against all body segments except the tail (which will move)
+        for (let i = 1; i < snake.length; i++) {
+          if (snake[i].x === next.x && snake[i].y === next.y) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function wrapDist(a, b, max) {
+        const d = Math.abs(a - b);
+        return Math.min(d, max - d);
+      }
+
+      function steer() {
+        const head = snake[snake.length - 1];
+
+        // Find nearest food using wrap-aware Manhattan distance
+        let nearestFood = null;
+        let nearestDist = Infinity;
+        for (const f of foods) {
+          const dist = wrapDist(head.x, f.x, cols) + wrapDist(head.y, f.y, rows);
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestFood = f;
+          }
+        }
+
+        // 15% random turn chance
+        if (Math.random() < 0.15) {
+          const dirs = [
+            { x: 0, y: -1 }, { x: 0, y: 1 },
+            { x: -1, y: 0 }, { x: 1, y: 0 }
+          ];
+          // Filter out reverse direction and collisions
+          const valid = dirs.filter(function(d) {
+            if (d.x === -direction.x && d.y === -direction.y) return false;
+            return !wouldCollide(d);
+          });
+          if (valid.length > 0) {
+            direction = valid[Math.floor(Math.random() * valid.length)];
+            return;
+          }
+        }
+
+        if (nearestFood) {
+          // Determine preferred directions toward food (wrap-aware)
+          const candidates = [];
+
+          const dxRaw = nearestFood.x - head.x;
+          const dyRaw = nearestFood.y - head.y;
+
+          // Horizontal preference
+          let prefX = 0;
+          if (dxRaw !== 0) {
+            const dxDirect = Math.abs(dxRaw);
+            const dxWrap = cols - dxDirect;
+            if (dxDirect <= dxWrap) {
+              prefX = dxRaw > 0 ? 1 : -1;
+            } else {
+              prefX = dxRaw > 0 ? -1 : 1;
+            }
+          }
+
+          // Vertical preference
+          let prefY = 0;
+          if (dyRaw !== 0) {
+            const dyDirect = Math.abs(dyRaw);
+            const dyWrap = rows - dyDirect;
+            if (dyDirect <= dyWrap) {
+              prefY = dyRaw > 0 ? 1 : -1;
+            } else {
+              prefY = dyRaw > 0 ? -1 : 1;
+            }
+          }
+
+          // Add preferred directions (prioritize axis with larger distance)
+          const hDist = wrapDist(head.x, nearestFood.x, cols);
+          const vDist = wrapDist(head.y, nearestFood.y, rows);
+
+          if (hDist >= vDist) {
+            if (prefX !== 0) candidates.push({ x: prefX, y: 0 });
+            if (prefY !== 0) candidates.push({ x: 0, y: prefY });
+          } else {
+            if (prefY !== 0) candidates.push({ x: 0, y: prefY });
+            if (prefX !== 0) candidates.push({ x: prefX, y: 0 });
+          }
+
+          // Try candidates in order
+          for (const c of candidates) {
+            // Don't reverse
+            if (c.x === -direction.x && c.y === -direction.y) continue;
+            if (!wouldCollide(c)) {
+              direction = c;
+              return;
+            }
+          }
+        }
+
+        // Fallback: if current direction collides, try alternatives
+        if (wouldCollide(direction)) {
+          const dirs = [
+            { x: 0, y: -1 }, { x: 0, y: 1 },
+            { x: -1, y: 0 }, { x: 1, y: 0 }
+          ];
+          const valid = dirs.filter(function(d) {
+            if (d.x === -direction.x && d.y === -direction.y) return false;
+            return !wouldCollide(d);
+          });
+          if (valid.length > 0) {
+            direction = valid[Math.floor(Math.random() * valid.length)];
+          }
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw food
+        ctx.fillStyle = FOOD_COLOR;
+        for (const f of foods) {
+          ctx.fillRect(f.x * CELL, f.y * CELL, CELL - 1, CELL - 1);
+        }
+
+        // Draw snake body
+        ctx.fillStyle = SNAKE_COLOR;
+        for (let i = 0; i < snake.length - 1; i++) {
+          ctx.fillRect(snake[i].x * CELL, snake[i].y * CELL, CELL - 1, CELL - 1);
+        }
+
+        // Draw snake head
+        if (snake.length > 0) {
+          ctx.fillStyle = SNAKE_HEAD_COLOR;
+          const head = snake[snake.length - 1];
+          ctx.fillRect(head.x * CELL, head.y * CELL, CELL - 1, CELL - 1);
+        }
+      }
+
+      function loop(timestamp) {
+        if (timestamp - lastTick >= TICK_MS) {
+          steer();
+          move();
+          draw();
+          lastTick = timestamp;
+        }
+        requestAnimationFrame(loop);
+      }
+
+      resize();
+      initSnake();
+      initFoods();
+      window.addEventListener('resize', function() { resize(); });
+      requestAnimationFrame(loop);
+    })();
   </script>
 </body>
 </html>
