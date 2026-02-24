@@ -291,8 +291,14 @@
         direction = { x: 1, y: 0 };
       }
 
-      function wrap(pos) {
-        return { x: ((pos.x % cols) + cols) % cols, y: ((pos.y % rows) + rows) % rows };
+      function clamp(pos) {
+        return { x: Math.max(0, Math.min(cols - 1, pos.x)), y: Math.max(0, Math.min(rows - 1, pos.y)) };
+      }
+
+      function isAtEdge(head, dir) {
+        var nx = head.x + dir.x;
+        var ny = head.y + dir.y;
+        return nx < 0 || nx >= cols || ny < 0 || ny >= rows;
       }
 
       // Get a random target point inside one of the text elements
@@ -309,7 +315,7 @@
 
       function move() {
         const head = snake[snake.length - 1];
-        const newHead = wrap({ x: head.x + direction.x, y: head.y + direction.y });
+        const newHead = clamp({ x: head.x + direction.x, y: head.y + direction.y });
         snake.push(newHead);
 
         // Record eaten pixel (black mask) at new head position
@@ -323,7 +329,9 @@
 
       function wouldCollide(dir) {
         const head = snake[snake.length - 1];
-        const next = wrap({ x: head.x + dir.x, y: head.y + dir.y });
+        // Wall = collision
+        if (isAtEdge(head, dir)) return true;
+        const next = { x: head.x + dir.x, y: head.y + dir.y };
         for (let i = 1; i < snake.length; i++) {
           if (snake[i].x === next.x && snake[i].y === next.y) return true;
         }
@@ -356,27 +364,14 @@
 
         if (currentTarget) {
           var candidates = [];
-          var dxRaw = currentTarget.x - head.x;
-          var dyRaw = currentTarget.y - head.y;
+          var dx = currentTarget.x - head.x;
+          var dy = currentTarget.y - head.y;
 
-          // Wrap-aware horizontal preference
-          var prefX = 0;
-          if (dxRaw !== 0) {
-            var dxDirect = Math.abs(dxRaw);
-            var dxWrap = cols - dxDirect;
-            prefX = dxDirect <= dxWrap ? Math.sign(dxRaw) : -Math.sign(dxRaw);
-          }
+          var prefX = dx !== 0 ? Math.sign(dx) : 0;
+          var prefY = dy !== 0 ? Math.sign(dy) : 0;
 
-          // Wrap-aware vertical preference
-          var prefY = 0;
-          if (dyRaw !== 0) {
-            var dyDirect = Math.abs(dyRaw);
-            var dyWrap = rows - dyDirect;
-            prefY = dyDirect <= dyWrap ? Math.sign(dyRaw) : -Math.sign(dyRaw);
-          }
-
-          var hDist = Math.min(Math.abs(dxRaw), cols - Math.abs(dxRaw));
-          var vDist = Math.min(Math.abs(dyRaw), rows - Math.abs(dyRaw));
+          var hDist = Math.abs(dx);
+          var vDist = Math.abs(dy);
 
           if (hDist >= vDist) {
             if (prefX !== 0) candidates.push({ x: prefX, y: 0 });
