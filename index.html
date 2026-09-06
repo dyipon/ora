@@ -183,7 +183,7 @@
     const weatherEl = document.getElementById('weather');
     const forecastEl = document.getElementById('forecast');
     const hourlyEl = document.getElementById('hourly');
-    const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=47.9025&longitude=20.3772&current=temperature_2m&daily=temperature_2m_max,weather_code,wind_speed_10m_max&hourly=temperature_2m,weather_code&timezone=auto&forecast_days=2';
+    const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=47.9025&longitude=20.3772&current=temperature_2m&daily=temperature_2m_max,weather_code,wind_speed_10m_max&hourly=temperature_2m,weather_code&timezone=auto&forecast_days=2&models=icon_seamless';
 
     function weatherIcon(code) {
       if (code <= 1) return '☀️';
