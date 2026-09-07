@@ -23,6 +23,7 @@ Fullscreen Progressive Web App (PWA) digitális óra egri időjárás- és hőm�
 ---
 
 ## Dokumentáció
+* [CLAUDE.md — felépítés, deploy, frissítési lánc, buktatók](CLAUDE.md)
 * [Időjárás-szolgáltatók, modellek és Google WeatherNext 3 integráció](docs/weather-providers.md)
 * [PWA Óra tervezési dokumentum](docs/plans/2026-02-20-pwa-clock-design.md)
 * [Snake animáció tervezése](docs/plans/2026-02-24-snake-animation-design.md)
