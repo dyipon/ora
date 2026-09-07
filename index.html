@@ -59,12 +59,6 @@
       opacity: 0.7;
     }
 
-    #date {
-      font-size: 4vw;
-      margin-top: 1vh;
-      opacity: 0.5;
-    }
-
     #weather {
       position: fixed;
       bottom: 3vh;
@@ -112,9 +106,6 @@
       #date-top {
         font-size: 7vw;
       }
-      #date {
-        font-size: 5vw;
-      }
       #weather {
         font-size: 9vw;
       }
@@ -143,7 +134,6 @@
       <span id="hours">00</span><span class="colon">:</span><span id="minutes">00</span>
     </div>
     <div id="date-top"></div>
-    <div id="date"></div>
   </div>
   <div id="weather"></div>
   <div id="forecast-area">
@@ -163,7 +153,6 @@
     const minutesEl = document.getElementById('minutes');
     const colonEl = document.querySelector('.colon');
     const dateTopEl = document.getElementById('date-top');
-    const dateEl = document.getElementById('date');
 
     function updateClock() {
       const now = new Date();
@@ -176,8 +165,7 @@
       const now = new Date();
       const day = DAYS[now.getDay()];
       const month = MONTHS[now.getMonth()];
-      dateTopEl.textContent = `${month} ${now.getDate()}`;
-      dateEl.textContent = day;
+      dateTopEl.textContent = `${month} ${now.getDate()}, ${day}`;
     }
 
     updateClock();
