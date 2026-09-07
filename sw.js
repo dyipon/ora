@@ -1,5 +1,14 @@
-const CACHE_NAME = 'ora-v2';
+const CACHE_NAME = 'ora-v3';
 const SHELL_FILES = ['/', '/index.html', '/manifest.json'];
+
+// The weather request carries a cache-busting `_t` param so it never hits a
+// cache on the way out. Strip it for the cache key, otherwise every refresh
+// would store a new entry and the offline fallback would never match.
+function weatherCacheKey(url) {
+  const u = new URL(url);
+  u.searchParams.delete('_t');
+  return u.toString();
+}
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -20,22 +29,34 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // Network-first for weather API
+  // Network-first for weather API, cached only as an offline fallback.
   if (url.hostname === 'api.open-meteo.com') {
+    const key = weatherCacheKey(e.request.url);
     e.respondWith(
       fetch(e.request)
         .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(key, clone));
+          }
           return res;
         })
-        .catch(() => caches.match(e.request))
+        .catch(() => caches.match(key))
     );
     return;
   }
 
-  // Cache-first for app shell
+  // Network-first for the app shell too, so a deployed change lands on the next
+  // load instead of waiting for a service worker update.
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request))
+    fetch(e.request)
+      .then((res) => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request))
   );
 });

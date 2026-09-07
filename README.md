@@ -1,6 +1,6 @@
 # Óra PWA
 
-Fullscreen Progressive Web App (PWA) digitális óra egri időjárás- és hőmérséklet-előrejelzéssel, képernyővédő burn-in védelemmel és háttérben futó snake animációval.
+Fullscreen Progressive Web App (PWA) digitális óra egri időjárás- és hőmérséklet-előrejelzéssel és képernyővédő burn-in védelemmel.
 
 Élő oldal: **[dyipon.github.io/ora/](https://dyipon.github.io/ora/)**
 
@@ -13,10 +13,12 @@ Fullscreen Progressive Web App (PWA) digitális óra egri időjárás- és hőm�
   * Napi csúcshőmérséklet és szélsebesség-figyelmeztetés.
   * Következő 4 óra ikonjai és hőmérsékletei.
   * **Modell:** Német Meteorológiai Szolgálat (DWD) **ICON-EU** modellje (~6.5 km felbontás, 3 óránkénti frissítés) az Open-Meteo API-n keresztül.
+  * **Frissítés:** 5 percenként, továbbá azonnal, ha a lap újra láthatóvá válik, fókuszt kap vagy visszatér a hálózat. Egy 15 másodperces watchdog bepótolja azt a frissítést, ami alvó eszközön kimaradt.
+  * **Elavult adat jelzése:** ha a megjelenített mérés 30 percnél régebbi, a hőmérséklet-blokk elhalványul, hogy a beragadt érték látszódjon.
 * **Képernyő ébrentartása (Wake Lock API):** Nem kapcsol le a kijelző, miközben az óra fut.
 * **Burn-in védelem:** Lassú, diszkrét pozíció-driftelés az OLED/AMOLED panelek beégésének megelőzésére.
-* **Snake háttéranimáció:** A feliratokat és a szöveges blokkokat kikerülő, háttérben mozgó kígyó animáció.
-* **Offline / PWA támogatás:** Service Worker cache (`ora-v2`), telepíthető kezdőképernyőre vagy fullscreen futtatható.
+* **Snake háttéranimáció:** Jelenleg **kikapcsolva** (`SNAKE_ENABLED = false` az `index.html`-ben); a kód megmaradt, egy sor átírásával visszakapcsolható.
+* **Offline / PWA támogatás:** Service Worker cache (`ora-v3`, network-first), telepíthető kezdőképernyőre vagy fullscreen futtatható.
 
 ---
 
